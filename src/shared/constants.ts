@@ -2,7 +2,7 @@ import { UserSettings, ManipulationType } from './types';
 
 export const DEFAULT_SETTINGS: UserSettings = {
   provider: 'gemini',
-  model: 'gemini-pro',
+  model: 'gemini-2_5-pro',
   language: 'en',
   highlightMode: 'full-color',
   autoAnalyze: false
@@ -57,8 +57,8 @@ export const ERROR_MESSAGES = {
 };
 
 export const GEMINI_MODELS = [
-  { value: 'gemini-pro', label: 'Gemini Pro' },
-  { value: 'gemini-pro-vision', label: 'Gemini Pro Vision' }
+  { value: 'gemini-2_5_flash', label: 'Gemini 2.5 Flash' },
+  { value: 'gemini-2_5_pro', label: 'Gemini 2.5 Pro' }
 ];
 
 export const SUPPORTED_LANGUAGES = [

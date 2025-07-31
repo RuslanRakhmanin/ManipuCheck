@@ -200,24 +200,13 @@ class OptionsController {
 
   private async testApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-        method: 'POST',
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: 'Test'
-            }]
-          }],
-          generationConfig: {
-            maxOutputTokens: 1
-          }
-        })
       });
-      
-      return response.status !== 401 && response.status !== 403;
+      return response.status === 200;
     } catch (error) {
       return false;
     }
