@@ -1,3 +1,5 @@
+import { GoogleGenAI } from "@google/genai";
+import { AnalysisError } from "../shared/types";
 import { MessageType, Message, ManipulationAnalysis, LLMProvider } from '../shared/types';
 import { SecureStorage } from '../shared/storage';
 import { onMessage, sendMessageToTab } from '../shared/messaging';
@@ -130,39 +132,28 @@ class BackgroundService {
   private async analyzeWithGemini(text: string, apiKey: string, model: string): Promise<ManipulationAnalysis> {
     const prompt = this.buildAnalysisPrompt(text);
     
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.1,
-          topK: 1,
-          topP: 1,
-          maxOutputTokens: 2048,
+    const ai = new GoogleGenAI({ apiKey });
+
+    try {
+      const result = await ai.models.generateContent({
+        model,
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+          thinkingConfig: {
+            includeThoughts: false
+          }
         }
-      })
-    });
+      });
+      const generatedText = result.text;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Gemini API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+      if (!generatedText) {
+        throw new Error('No response generated from Gemini API');
+      }
+
+      return this.parseAnalysisResponse(generatedText);
+    } catch (error: unknown) {
+      throw new AnalysisError('Failed to get or parse Gemini API response', error instanceof Error ? error : undefined);
     }
-
-    const data = await response.json();
-    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!generatedText) {
-      throw new Error('No response generated from Gemini API');
-    }
-
-    return this.parseAnalysisResponse(generatedText);
   }
 
   private buildAnalysisPrompt(text: string): string {

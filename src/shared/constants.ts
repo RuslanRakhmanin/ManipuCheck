@@ -57,8 +57,8 @@ export const ERROR_MESSAGES = {
 };
 
 export const GEMINI_MODELS = [
-  { value: 'gemini-2_5_flash', label: 'Gemini 2.5 Flash' },
-  { value: 'gemini-2_5_pro', label: 'Gemini 2.5 Pro' }
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' }
 ];
 
 export const SUPPORTED_LANGUAGES = [
