@@ -16,6 +16,15 @@ class ContentScript {
   }
 
   private async init(): Promise<void> {
+    sendMessage({
+      type: MessageType.DEBUG,
+      payload: {
+        source: 'Content Script',
+        message: 'Content script initialized',
+        data: { url: window.location.href }
+      }
+    });
+
     // Check if auto-analyze is enabled
     try {
       const settings = await chrome.storage.sync.get(['autoAnalyze']);
@@ -153,6 +162,14 @@ class ContentScript {
   }
 
   private handleAnalysisComplete(analysis: ManipulationAnalysis): void {
+    sendMessage({
+      type: MessageType.DEBUG,
+      payload: {
+        source: 'Content Script',
+        message: 'handleAnalysisComplete called',
+        data: { analysis }
+      }
+    });
     this.currentAnalysis = analysis;
     
     // Get current settings for highlight mode

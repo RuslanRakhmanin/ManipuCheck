@@ -3,6 +3,7 @@ import { AnalysisError } from "../shared/types";
 import { MessageType, Message, ManipulationAnalysis, LLMProvider } from '../shared/types';
 import { SecureStorage } from '../shared/storage';
 import { onMessage, sendMessageToTab } from '../shared/messaging';
+import { debugLog } from '../shared/debug';
 
 class BackgroundService {
   private analysisInProgress = new Set<number>();
@@ -19,6 +20,7 @@ class BackgroundService {
       try {
         switch (message.type) {
           case MessageType.ANALYZE_PAGE:
+            debugLog('Service Worker', 'Received ANALYZE_PAGE message');
             if (tabId) {
               await this.handleAnalyzeRequest(tabId, message.payload?.text);
             }
@@ -36,6 +38,13 @@ class BackgroundService {
               sendResponse?.({ analyzing: isAnalyzing });
             }
             break;
+
+          case MessageType.DEBUG:
+            if (message.payload) {
+              const { source, message: msg, data } = message.payload;
+              debugLog(source, msg, data);
+            }
+            break;
         }
       } catch (error) {
         console.error('Background service error:', error);
@@ -50,6 +59,7 @@ class BackgroundService {
 
   private setupContextMenus(): void {
     chrome.runtime.onInstalled.addListener(() => {
+      debugLog('Service Worker', 'Extension installed or updated.');
       chrome.contextMenus.create({
         id: 'analyze-selection',
         title: 'Analyze selected text for manipulation',
@@ -65,6 +75,7 @@ class BackgroundService {
 
     chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       if (!tab?.id) return;
+      debugLog('Service Worker', 'Context menu clicked', info);
 
       try {
         switch (info.menuItemId) {
@@ -87,7 +98,9 @@ class BackgroundService {
   }
 
   private async handleAnalyzeRequest(tabId: number, text: string): Promise<void> {
+    debugLog('Service Worker', 'handleAnalyzeRequest started', { tabId });
     if (this.analysisInProgress.has(tabId)) {
+      debugLog('Service Worker', 'Analysis already in progress for this tab', { tabId });
       return; // Analysis already in progress for this tab
     }
 
@@ -95,6 +108,7 @@ class BackgroundService {
 
     try {
       const settings = await SecureStorage.getSettings();
+      debugLog('Service Worker', 'Got settings', { settings });
       const apiKey = await SecureStorage.getAPIKey(settings.provider);
 
       if (!apiKey) {
@@ -102,6 +116,7 @@ class BackgroundService {
       }
 
       const analysis = await this.performAnalysis(text, settings.provider, apiKey, settings.model);
+      debugLog('Service Worker', 'Analysis complete, sending to tab', { tabId });
       
       await sendMessageToTab(tabId, {
         type: MessageType.ANALYSIS_COMPLETE,
@@ -122,6 +137,7 @@ class BackgroundService {
     apiKey: string, 
     model: string
   ): Promise<ManipulationAnalysis> {
+    debugLog('Service Worker', 'performAnalysis started', { provider, model });
     if (provider === 'gemini') {
       return this.analyzeWithGemini(text, apiKey, model);
     }
@@ -130,6 +146,7 @@ class BackgroundService {
   }
 
   private async analyzeWithGemini(text: string, apiKey: string, model: string): Promise<ManipulationAnalysis> {
+    debugLog('Service Worker', 'analyzeWithGemini started');
     const prompt = this.buildAnalysisPrompt(text);
     
     const ai = new GoogleGenAI({ apiKey });
@@ -145,6 +162,7 @@ class BackgroundService {
         }
       });
       const generatedText = result.text;
+      debugLog('Service Worker', 'Got response from Gemini', { generatedText });
 
       if (!generatedText) {
         throw new Error('No response generated from Gemini API');

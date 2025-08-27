@@ -9,6 +9,13 @@ class PopupController {
   private currentAnalysis: ManipulationAnalysis | null = null;
 
   constructor() {
+    sendMessage({
+      type: MessageType.DEBUG,
+      payload: {
+        source: 'Popup',
+        message: 'Popup opened',
+      }
+    });
     this.initializeElements();
     this.setupEventListeners();
     this.loadSettings();
@@ -104,6 +111,13 @@ class PopupController {
   }
 
   private async analyzePage(): Promise<void> {
+    sendMessage({
+      type: MessageType.DEBUG,
+      payload: {
+        source: 'Popup',
+        message: "'Analyze Page' button clicked",
+      }
+    });
     try {
       this.setStatus('analyzing', 'Analyzing page...');
       this.showSection('none');
