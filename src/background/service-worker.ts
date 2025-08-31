@@ -13,49 +13,51 @@ class BackgroundService {
     this.setupContextMenus();
   }
 
-  private setupMessageListeners(): void {
-    onMessage(async (message: Message, sender, sendResponse) => {
-      const tabId = sender?.tab?.id;
-      
-      try {
-        switch (message.type) {
-          case MessageType.ANALYZE_PAGE:
-            debugLog('Service Worker', 'Received ANALYZE_PAGE message');
-            if (tabId) {
-              await this.handleAnalyzeRequest(tabId, message.payload?.text);
-            }
-            break;
-          
-          case MessageType.ANALYZE_SELECTION:
-            if (tabId) {
-              await this.handleAnalyzeRequest(tabId, message.payload?.selectedText);
-            }
-            break;
-          
-          case MessageType.GET_ANALYSIS_STATUS:
-            if (tabId) {
-              const isAnalyzing = this.analysisInProgress.has(tabId);
-              sendResponse?.({ analyzing: isAnalyzing });
-            }
-            break;
+private setupMessageListeners(): void {
+  onMessage(async (message: Message, sender, sendResponse) => {
+    let tabId = sender?.tab?.id;
 
-          case MessageType.DEBUG:
-            if (message.payload) {
-              const { source, message: msg, data } = message.payload;
-              debugLog(source, msg, data);
-            }
-            break;
-        }
-      } catch (error) {
-        console.error('Background service error:', error);
-        if (tabId) {
-          this.sendAnalysisError(tabId, error instanceof Error ? error.message : 'Unknown error');
-        }
+    // If tabId is not available from sender (e.g., from popup), get the active tab
+    if (tabId === undefined) {
+      tabId = await this.getActiveTabId();
+      if (tabId === undefined) {
+        // console.error('Could not determine active tab ID.');
+        debugLog('Service Worker', 'Could not determine active tab ID.');
+        return true; // Return true to keep message channel open
       }
-      
-      return true; // Keep message channel open for async response
-    });
-  }
+    }
+    
+    try {
+      switch (message.type) {
+        case MessageType.ANALYZE_PAGE:
+          debugLog('Service Worker', 'Received ANALYZE_PAGE message from ' + tabId);
+          await this.handleAnalyzeRequest(tabId, message.payload?.text);
+          break;
+        
+        case MessageType.ANALYZE_SELECTION:
+          await this.handleAnalyzeRequest(tabId, message.payload?.selectedText);
+          break;
+        
+        case MessageType.GET_ANALYSIS_STATUS:
+          const isAnalyzing = this.analysisInProgress.has(tabId);
+          sendResponse?.({ analyzing: isAnalyzing });
+          break;
+
+        case MessageType.DEBUG:
+          if (message.payload) {
+            const { source, message: msg, data } = message.payload;
+            debugLog(source, msg, data);
+          }
+          break;
+      }
+    } catch (error) {
+      console.error('Background service error:', error);
+      this.sendAnalysisError(tabId, error instanceof Error ? error.message : 'Unknown error');
+    }
+    
+    return true; // Keep message channel open for async response
+  });
+}
 
   private setupContextMenus(): void {
     chrome.runtime.onInstalled.addListener(() => {
@@ -248,7 +250,7 @@ ${text}`;
     }
   }
 
-  private async sendAnalysisError(tabId: number, message: string): Promise<void> {
+private async sendAnalysisError(tabId: number, message: string): Promise<void> {
     try {
       await sendMessageToTab(tabId, {
         type: MessageType.ANALYSIS_ERROR,
@@ -257,6 +259,11 @@ ${text}`;
     } catch (error) {
       console.error('Failed to send error message to tab:', error);
     }
+  }
+
+  private async getActiveTabId(): Promise<number | undefined> {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tabs[0]?.id;
   }
 }
 
