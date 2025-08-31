@@ -2,6 +2,7 @@ import { TextHighlighter } from './text-highlighter';
 import { ContentExtractor } from './content-extractor';
 import { MessageType, Message, ManipulationAnalysis, AnalysisStatus } from '../shared/types';
 import { sendMessage, onMessage } from '../shared/messaging';
+import { debugLog } from '../shared/debug';
 
 class ContentScript {
   private textHighlighter: TextHighlighter;
@@ -64,6 +65,12 @@ class ContentScript {
         
         case MessageType.UPDATE_SETTINGS:
           this.handleUpdateSettings(message.payload);
+          break;
+        
+        case MessageType.ANALYSIS_COMPLETE:
+          if (message.payload && message.payload.analysis) {
+            this.handleAnalysisComplete(message.payload.analysis);
+          }
           break;
       }
     });
@@ -144,17 +151,13 @@ class ContentScript {
 
   private async analyzeText(text: string): Promise<void> {
     try {
+      debugLog('Content Script', 'Sending text for analysis', { text });
       // Send analysis request to background script
-      const response = await sendMessage({
+      sendMessage({
         type: MessageType.ANALYZE_PAGE,
         payload: { text }
       });
-
-      if (response && response.analysis) {
-        this.handleAnalysisComplete(response.analysis);
-      } else {
-        this.sendAnalysisError('No analysis results received');
-      }
+      // Analysis results will be received via ANALYSIS_COMPLETE message
     } catch (error) {
       console.error('Analysis failed:', error);
       this.sendAnalysisError(error instanceof Error ? error.message : 'Analysis failed');
@@ -201,6 +204,7 @@ class ContentScript {
   }
 
   private sendAnalysisError(message: string): void {
+    debugLog('Content Script', 'Sending analysis error', { message });
     sendMessage({
       type: MessageType.ANALYSIS_ERROR,
       payload: { error: message }

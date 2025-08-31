@@ -35,6 +35,7 @@ private setupMessageListeners(): void {
           break;
         
         case MessageType.ANALYZE_SELECTION:
+          debugLog('Service Worker', 'Received ANALYZE_SELECTION message from ' + tabId + ': ' + message.payload?.selectedText);
           await this.handleAnalyzeRequest(tabId, message.payload?.selectedText);
           break;
         
@@ -77,7 +78,7 @@ private setupMessageListeners(): void {
 
     chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       if (!tab?.id) return;
-      debugLog('Service Worker', 'Context menu clicked', info);
+      debugLog('Service Worker', 'Context menu clicked on tab', { tabId: tab.id, info });
 
       try {
         switch (info.menuItemId) {
@@ -118,7 +119,7 @@ private setupMessageListeners(): void {
       }
 
       const analysis = await this.performAnalysis(text, settings.provider, apiKey, settings.model);
-      debugLog('Service Worker', 'Analysis complete, sending to tab', { tabId });
+      debugLog('Service Worker', 'Analysis complete, sending to tab', { tabId, analysis });
       
       await sendMessageToTab(tabId, {
         type: MessageType.ANALYSIS_COMPLETE,
@@ -148,9 +149,9 @@ private setupMessageListeners(): void {
   }
 
   private async analyzeWithGemini(text: string, apiKey: string, model: string): Promise<ManipulationAnalysis> {
-    debugLog('Service Worker', 'analyzeWithGemini started');
+    debugLog('Service Worker', 'analyzeWithGemini started' + ' model:' + model);
     const prompt = this.buildAnalysisPrompt(text);
-    
+    debugLog('Service Worker', 'Generated prompt for Gemini', { prompt });
     const ai = new GoogleGenAI({ apiKey });
 
     try {
@@ -172,6 +173,7 @@ private setupMessageListeners(): void {
 
       return this.parseAnalysisResponse(generatedText);
     } catch (error: unknown) {
+      debugLog('Service Worker', 'Error occurred while analyzing with Gemini', { error });
       throw new AnalysisError('Failed to get or parse Gemini API response', error instanceof Error ? error : undefined);
     }
   }
@@ -190,7 +192,7 @@ private setupMessageListeners(): void {
   ],
   "analysisDate": "${new Date().toISOString()}",
   "provider": "gemini",
-  "model": "gemini-pro"
+  "model": "exact model that was used to process this request"
 }
 
 Focus on identifying:
