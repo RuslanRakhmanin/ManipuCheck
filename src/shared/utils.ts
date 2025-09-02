@@ -2,7 +2,8 @@ import { ManipulationBlock, AnalysisResult } from './types';
 import { MANIPULATION_CATEGORIES } from './constants';
 
 export function normalizeText(text: string): string {
-  return text.replace(/\s+/g, ' ').trim();
+  //return text.replace(/\s+/g, ' ').trim();
+  return text.replace(/\s+/g, '').trim();
 }
 
 export function countWords(text: string): number {

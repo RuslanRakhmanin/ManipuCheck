@@ -1,4 +1,7 @@
 import { normalizeText } from '../shared/utils';
+import { sendMessage} from '../shared/messaging';
+import { MessageType } from '../shared/types';
+
 
 export interface TextPositionMap {
   node: Text;
@@ -68,15 +71,16 @@ export class TextMatcher {
         this.textNodes.push(node);
         globalOffset += normalizedText.length;
         
-        // Add space between text nodes for proper word separation
-        if (globalOffset > 0) globalOffset += 1;
+        // // Add space between text nodes for proper word separation
+        // if (globalOffset > 0) globalOffset += 1;
       }
     }
     
     // Build full normalized text for searching
     this.fullNormalizedText = this.textPositionMap
       .map(item => item.normalizedText)
-      .join(' ');
+      //.join(' ');
+      .join('');
   }
 
   findTextRanges(targetText: string): DOMRange[] {
@@ -88,11 +92,36 @@ export class TextMatcher {
     // Search for the normalized text in our full text
     let searchStart = 0;
     let matchIndex: number;
-    
+    //debugLog('Text Matcher', 'Searching for text ranges', { targetText });
+    sendMessage({
+      type: MessageType.DEBUG,
+      payload: {
+        source: 'Text Matcher',
+        message: 'Searching for text ranges',
+        data: { normalizedTarget }
+      }
+    });
+    // sendMessage({
+    //   type: MessageType.DEBUG,
+    //   payload: {
+    //     source: 'Text Matcher',
+    //     message: 'Full normalized text',
+    //     data: { fullNormalizedText: this.fullNormalizedText }
+    //   }
+    // });
     while ((matchIndex = this.fullNormalizedText.indexOf(normalizedTarget, searchStart)) !== -1) {
       const range = this.createDOMRange(matchIndex, matchIndex + normalizedTarget.length);
       if (range) {
         ranges.push(range);
+        //debugLog('Text Matcher', 'Found text range', { range });
+        sendMessage({
+          type: MessageType.DEBUG,
+          payload: {
+            source: 'Text Matcher',
+            message: 'Found text range',
+            data: { range }
+          }
+        });    
       }
       searchStart = matchIndex + 1;
     }
@@ -143,7 +172,8 @@ export class TextMatcher {
         };
       }
       
-      currentPos += nodeLength + 1; // +1 for space between nodes
+      // currentPos += nodeLength + 1; // +1 for space between nodes
+      currentPos += nodeLength;
     }
     
     return null;
@@ -157,8 +187,11 @@ export class TextMatcher {
       const char = originalText[i];
       
       if (/\s/.test(char)) {
-        // Skip consecutive whitespace in normalization
-        if (i === 0 || !/\s/.test(originalText[i - 1])) {
+        // // Skip consecutive whitespace in normalization
+        // if (i === 0 || !/\s/.test(originalText[i - 1])) {
+        //   normalizedPos++;
+        // }
+        if (i === 0) {
           normalizedPos++;
         }
       } else {

@@ -2,6 +2,8 @@ import { ManipulationBlock, HighlightMode, ManipulationType } from '../shared/ty
 import { MANIPULATION_COLORS } from '../shared/constants';
 import { TextMatcher } from './text-matcher';
 import { TooltipManager } from './tooltip-manager';
+import { sendMessage} from '../shared/messaging';
+import { MessageType } from '../shared/types';
 
 export interface HighlightInfo {
   element: HTMLElement;
@@ -48,6 +50,14 @@ export class TextHighlighter {
         manipulation, 
         highlightId
       );
+      // sendMessage({
+      //   type: MessageType.DEBUG,
+      //   payload: {
+      //     source: 'Text Highlighter',
+      //     message: 'Highlighting range',
+      //     data: { Content: highlightElement?.innerHTML }
+      //   }
+      // });
       
       if (highlightElement) {
         this.highlightedElements.set(highlightId, {
@@ -72,25 +82,7 @@ export class TextHighlighter {
       }
 
       const span = document.createElement('span');
-      span.id = highlightId;
-      span.className = this.getHighlightClass(manipulation.manipulation_type);
-      span.setAttribute('data-manipulation-type', manipulation.manipulation_type);
-      span.setAttribute('data-manipulation-description', manipulation.manipulation_description);
-      span.setAttribute('data-confidence', manipulation.confidence.toString());
-      
-      // Event listeners for tooltip
-      span.addEventListener('mouseenter', (e) => {
-        this.tooltipManager.showTooltip(e.target as HTMLElement, manipulation);
-      });
-      
-      span.addEventListener('mouseleave', () => {
-        this.tooltipManager.hideTooltip();
-      });
-
-      span.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.tooltipManager.toggleTooltip(e.target as HTMLElement, manipulation);
-      });
+      this.setupHighlightElement(span, highlightId, manipulation);
       
       // Wrap the range content
       range.surroundContents(span);
@@ -104,6 +96,32 @@ export class TextHighlighter {
     }
   }
 
+  private setupHighlightElement(
+    element: HTMLElement,
+    highlightId: string,
+    manipulation: ManipulationBlock
+  ): void {
+    element.id = highlightId;
+    element.className = this.getHighlightClass(manipulation.manipulation_type);
+    element.setAttribute('data-manipulation-type', manipulation.manipulation_type);
+    element.setAttribute('data-manipulation-description', manipulation.manipulation_description);
+    element.setAttribute('data-confidence', manipulation.confidence.toString());
+    
+    // Event listeners for tooltip
+    element.addEventListener('mouseenter', (e) => {
+      this.tooltipManager.showTooltip(e.target as HTMLElement, manipulation);
+    });
+    
+    element.addEventListener('mouseleave', () => {
+      this.tooltipManager.hideTooltip();
+    });
+
+    element.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.tooltipManager.toggleTooltip(e.target as HTMLElement, manipulation);
+    });
+  }
+  
   private createHighlightElementAlternative(
     range: Range, 
     manipulation: ManipulationBlock, 
